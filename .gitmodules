@@ -1,0 +1,4 @@
+[submodule "rapido"]
+	path = rapido
+	url = https://github.com/rapido-linux/rapido.git
+	branch = master
