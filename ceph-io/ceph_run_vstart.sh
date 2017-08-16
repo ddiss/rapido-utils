@@ -17,17 +17,19 @@
 RAPIDO_DIR="`dirname $0`/../rapido"
 . "${RAPIDO_DIR}/runtime.vars"
 
-_rt_require_ceph
-
 [ -z "$CEPH_SRC" ] && _fail "CEPH_SRC must be set for vstart"
 [ -z "$BR_ADDR" ] && _fail "BR_ADDR must be set for vstart"
 
+# Cmake vstarts now fail with the subnet suffix, so strip it
+br_ip=${BR_ADDR%/*}
+
 if [ -f "${CEPH_SRC}/build/CMakeCache.txt" ]; then
 	cd ${CEPH_SRC}/build
-	../src/vstart.sh -n -i $BR_ADDR --mon_num 1 --osd_num 3 --mds_num 0 \
+	../src/vstart.sh -n -i $br_ip --mon_num 1 --osd_num 3 --mds_num 0 \
+		--mgr_num 1 \
 		|| _fail "CMake based vstart failed"
 else
 	cd ${CEPH_SRC}/src
-	./vstart.sh -n -i $BR_ADDR --mon_num 1 --osd_num 3 --mds_num 0 \
+	./vstart.sh -n -i $br_ip --mon_num 1 --osd_num 4 --mds_num 0 \
 		|| _fail "autotools based vstart failed"
 fi
