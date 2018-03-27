@@ -19,15 +19,28 @@ RAPIDO_DIR="`dirname $0`/../rapido"
 
 _rt_require_ceph
 
+ec_pool="ec"
+rados_run="$CEPH_RADOS_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 rbd_run="$CEPH_RBD_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
+ceph_run="$CEPH_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 
 set -x
 
-$CEPH_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER \
-	osd pool set ec allow_ec_overwrites true \
+# the "ec" pool should have been created by vstart
+$rados_run --pool="$ec_pool" df &> /dev/null || _fail "pool missing: $ec_pool"
+
+$rados_run --pool="$CEPH_RBD_POOL" df &> /dev/null
+if [ $? -ne 0 ]; then
+	$rados_run mkpool "$CEPH_RBD_POOL" \
+		|| _fail "failed to create pool"
+	$ceph_run osd pool application enable "$CEPH_RBD_POOL" rbd \
+		|| echo "ignoring failed application set"
+fi
+
+$ceph_run osd pool set ec allow_ec_overwrites true \
 	|| _fail "failed to enable allow_ec_overwrites"
 
 # assume "vstart -e" ec and rbd pools
-$rbd_run --data-pool ec --journal-pool rbd create \
+$rbd_run --data-pool "$ec_pool" --journal-pool "$CEPH_RBD_POOL" create \
 	 --image-feature layering,data-pool \
 	 --size=${CEPH_RBD_IMAGE_MB}M $CEPH_RBD_IMAGE || exit 1
