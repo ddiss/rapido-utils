@@ -19,6 +19,7 @@ _rt_require_ceph
 
 rados_run="$CEPH_RADOS_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 rbd_run="$CEPH_RBD_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
+ceph_run="$CEPH_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 
 set -x
 
@@ -26,6 +27,8 @@ $rados_run --pool="$CEPH_RBD_POOL" df &> /dev/null
 if [ $? -ne 0 ]; then
 	$rados_run mkpool "$CEPH_RBD_POOL" \
 		|| _fail "failed to create pool"
+	$ceph_run osd pool application enable "$CEPH_RBD_POOL" rbd \
+		|| echo "ignoring failed application set"
 fi
 
 $rbd_run create --image-feature layering --size="${CEPH_RBD_IMAGE_MB}M" \
