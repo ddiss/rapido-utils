@@ -25,8 +25,9 @@ br_ip=${BR_ADDR%/*}
 
 if [ -f "${CEPH_SRC}/build/CMakeCache.txt" ]; then
 	cd ${CEPH_SRC}/build
-	../src/vstart.sh -n -i $br_ip --mon_num 1 --osd_num 3 --mds_num 0 \
-		--mgr_num 1 \
+
+	MON=1 OSD=3 MDS=1 MGR=1 RGW=0 ../src/vstart.sh -n -i $br_ip \
+		--bluestore \
 		|| _fail "CMake based vstart failed"
 else
 	cd ${CEPH_SRC}/src
