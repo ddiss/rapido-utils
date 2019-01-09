@@ -13,9 +13,27 @@
 # License for more details.
 
 # start a vstart Ceph cluster from CEPH_SRC
+# XXX sudo is used for zram provisioning/mounting
 
-RAPIDO_DIR="`dirname $0`/../rapido"
+RAPIDO_DIR="$(dirname $0)/../rapido"
+RAPIDO_DIR="$(realpath $RAPIDO_DIR)"
 . "${RAPIDO_DIR}/runtime.vars"
+
+
+function _zram_mkfs_mount {
+	local dev_size="$1"
+	local mnt_path=$(realpath "$2")
+	local mnt_owner="$3"
+	local is_mounted=$(grep --files-with-match "$mnt_path" /proc/mounts)
+	if [ -d "$mnt_path" ] && [ -z "$is_mounted" ]; then
+		zram_dev=$(sudo "${RAPIDO_DIR}/tools/zram_hot_add.sh" \
+				"$dev_size" "$owner")
+		[ -b "$zram_dev" ] || _fail "zram_dev ($zram_dev) didn't appear"
+		sudo /sbin/mkfs.xfs "$zram_dev" || _fail
+		sudo mount "$zram_dev" "$mnt_path" || _fail
+		sudo chown "$owner" "$mnt_path" || _fail
+	fi
+}
 
 [ -z "$CEPH_SRC" ] && _fail "CEPH_SRC must be set for vstart"
 [ -z "$BR_ADDR" ] && _fail "BR_ADDR must be set for vstart"
@@ -23,8 +41,15 @@ RAPIDO_DIR="`dirname $0`/../rapido"
 # Cmake vstarts now fail with the subnet suffix, so strip it
 br_ip=${BR_ADDR%/*}
 
+set -x	# want to be able to see what sudo is doing
+
 if [ -f "${CEPH_SRC}/build/CMakeCache.txt" ]; then
-	cd ${CEPH_SRC}/build
+	cd "${CEPH_SRC}/build"
+	# use Ceph dir ownership for out and dev mounts
+	owner=$(stat --format="%U:%G" "${CEPH_SRC}/build") || _fail
+
+	_zram_mkfs_mount "1G" "${CEPH_SRC}/build/out" "$owner"
+	_zram_mkfs_mount "5G" "${CEPH_SRC}/build/dev" "$owner"
 
 	MON=1 OSD=3 MDS=1 MGR=1 RGW=0 ../src/vstart.sh -n -i $br_ip \
 		--bluestore \
