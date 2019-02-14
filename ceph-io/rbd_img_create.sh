@@ -17,15 +17,14 @@ RAPIDO_DIR="`dirname $0`/../rapido"
 
 _rt_require_ceph
 
-rados_run="$CEPH_RADOS_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 rbd_run="$CEPH_RBD_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 ceph_run="$CEPH_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 
 set -x
 
-$rados_run --pool="$CEPH_RBD_POOL" df &> /dev/null
+$ceph_run osd pool get "$CEPH_RBD_POOL" size &> /dev/null
 if [ $? -ne 0 ]; then
-	$rados_run mkpool "$CEPH_RBD_POOL" \
+	$ceph_run osd pool create "$CEPH_RBD_POOL" 128 \
 		|| _fail "failed to create pool"
 	$ceph_run osd pool application enable "$CEPH_RBD_POOL" rbd \
 		|| echo "ignoring failed application set"

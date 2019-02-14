@@ -23,14 +23,13 @@ _rt_require_ceph
 vstart_default_fs="cephfs_a"
 new_pool="new_pool"
 
-rados_run="$CEPH_RADOS_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 ceph_run="$CEPH_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 
 set -x
 $ceph_run fs ls | grep -q "$vstart_default_fs" \
 	|| _fail "$vstart_default_fs filesystem not present"
 
-$rados_run mkpool "$new_pool" || _fail "failed to create new pool"
+$ceph_run osd pool create "$new_pool" 128 || _fail "failed to create new pool"
 $ceph_run fs add_data_pool "$vstart_default_fs" "$new_pool" \
 	|| _fail "failed to add new_pool to $vstart_default_fs"
 
