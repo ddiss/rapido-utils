@@ -17,6 +17,9 @@ RAPIDO_DIR="`dirname $0`/../rapido"
 
 _rt_require_ceph
 
+# CEPH[_RBD]_BIN aren't set by rapido
+CEPH_RBD_BIN="$(dirname $CEPH_CONF_BIN)/rbd"
+CEPH_BIN="$(dirname $CEPH_CONF_BIN)/ceph"
 ceph_run="$CEPH_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 rbd_run="$CEPH_RBD_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 # use arbitrary values for clone parent and snapshot names
@@ -33,7 +36,8 @@ if [ $? -ne 0 ]; then
 		|| echo "ignoring failed application set"
 fi
 
-$rbd_run create --size="${CEPH_RBD_IMAGE_MB}M" "$rbd_img_parent" || exit 1
+$rbd_run create --image-feature layering --size="${CEPH_RBD_IMAGE_MB}M" \
+	--pool "$CEPH_RBD_POOL" "$rbd_img_parent" || exit 1
 $rbd_run snap create "${rbd_img_parent}@${rbd_snap}" || exit 1
 $rbd_run snap protect "${rbd_img_parent}@${rbd_snap}" || exit 1
 $rbd_run clone "${rbd_img_parent}@${rbd_snap}" "$CEPH_RBD_IMAGE" || exit 1

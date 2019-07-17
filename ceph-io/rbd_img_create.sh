@@ -17,6 +17,9 @@ RAPIDO_DIR="`dirname $0`/../rapido"
 
 _rt_require_ceph
 
+# CEPH[_RBD]_BIN aren't set by rapido
+CEPH_RBD_BIN="$(dirname $CEPH_CONF_BIN)/rbd"
+CEPH_BIN="$(dirname $CEPH_CONF_BIN)/ceph"
 rbd_run="$CEPH_RBD_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 ceph_run="$CEPH_BIN -c $CEPH_CONF -k $CEPH_KEYRING --user $CEPH_USER"
 
