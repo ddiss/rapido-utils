@@ -24,6 +24,7 @@ trap "rm $creds_path" 0 1 2 3 15
 [ -n "$CIFS_PW" ] && echo "password=${CIFS_PW}" >> $creds_path
 set -x
 
+LD_LIBRARY_PATH="${SAMBA_SRC}/bin/shared:${SAMBA_SRC}/bin/shared/private"
 ${SAMBA_SRC}/bin/smbclient -A $creds_path //${CIFS_SERVER}/${CIFS_SHARE} \
 	|| _fail
 
