@@ -16,6 +16,20 @@ RAPIDO_DIR="`dirname $0`/../rapido"
 RAPIDO_DIR="$(realpath $RAPIDO_DIR)"
 . "${RAPIDO_DIR}/runtime.vars"
 
+# _rt_xattr_vm_resources_set() stores cpu and mem resources in qemu format.
+# strip out mem only.
+function _uml_mem_from_qemu_resources
+{
+	local qemu_rsc="$1"
+	local qemu_rsc_re='-smp cpus=([0-9]+) -m ([0-9]+)([MGmg]?)'
+
+	if [[ $qemu_rsc =~ $qemu_rsc_re ]]; then
+		local mem_sfx=${BASH_REMATCH[3]}
+		[ -z "$mem_sfx" ] && mem_sfx="m"
+		echo "${BASH_REMATCH[2]}${mem_sfx}"
+	fi
+}
+
 function _uml_is_running
 {
 	local vm_num=$1
@@ -62,13 +76,13 @@ function _uml_start
 		qemu_netdev="eth0=tuntap,${tap},${mac_addr}"
 	fi
 
-	# cut_ script may have specified some parameters for qemu
-	local qemu_more_args="$qemu_netdev"
-
+	local vm_mem=""
+	# cut_ script may have specified cpu/mem parameters for qemu
 	local vm_resources="$(_rt_xattr_vm_resources_get ${DRACUT_OUT})"
-	[ -z "$vm_resources" ] \
-		|| _fail "explicit VM resources not supported by UML runner"
-	vm_resources="mem=512m"
+	if [ -n "$vm_resources" ]; then
+		vm_mem=$(_uml_mem_from_qemu_resources "$vm_resources")
+	fi
+	[ -z "$vm_mem" ] && vm_mem="128m"	# qemu default
 
 	# rapido.conf might have specified a shared folder for qemu
 	[ -z "$VIRTFS_SHARE_PATH" ] \
@@ -77,10 +91,7 @@ function _uml_start
 	[ -x "${KERNEL_SRC}/linux" ] \
 	   || _fail "no UML executable at ${KERNEL_SRC}/linux. Build needed?"
 
-	set -x
-
-	#	umid=rapido_uml${vm_num} \
-	${KERNEL_SRC}/linux $vm_resources \
+	${KERNEL_SRC}/linux mem=${vm_mem} \
 		initrd=$DRACUT_OUT \
 		rapido.vm_num=${vm_num} ip=${kern_ip_addr} \
 		rd.systemd.unit=emergency \
