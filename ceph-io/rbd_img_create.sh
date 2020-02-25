@@ -29,8 +29,8 @@ $ceph_run osd pool get "$CEPH_RBD_POOL" size &> /dev/null
 if [ $? -ne 0 ]; then
 	$ceph_run osd pool create "$CEPH_RBD_POOL" 128 \
 		|| _fail "failed to create pool"
-	$ceph_run osd pool application enable "$CEPH_RBD_POOL" rbd \
-		|| echo "ignoring failed application set"
+	$rbd_run pool init "$CEPH_RBD_POOL" \
+		|| _fail "failed to init rbd pool"
 fi
 
 $rbd_run create --image-feature layering --size="${CEPH_RBD_IMAGE_MB}M" \
