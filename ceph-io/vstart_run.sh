@@ -19,7 +19,6 @@ RAPIDO_DIR="$(dirname $0)/../rapido"
 RAPIDO_DIR="$(realpath $RAPIDO_DIR)"
 . "${RAPIDO_DIR}/runtime.vars"
 
-
 function _zram_mkfs_mount {
 	local dev_size="$1"
 	local mnt_path=$(realpath "$2")
@@ -43,19 +42,13 @@ br_ip=${BR_ADDR%/*}
 
 set -x	# want to be able to see what sudo is doing
 
-if [ -f "${CEPH_SRC}/build/CMakeCache.txt" ]; then
-	cd "${CEPH_SRC}/build"
-	# use Ceph dir ownership for out and dev mounts
-	owner=$(stat --format="%U:%G" "${CEPH_SRC}/build") || _fail
+cd "${CEPH_SRC}/build" || _fail "failed to enter CEPH_SRC build dir"
+# use Ceph dir ownership for out and dev mounts
+owner=$(stat --format="%U:%G" "${CEPH_SRC}/build") || _fail
 
-	_zram_mkfs_mount "1G" "${CEPH_SRC}/build/out" "$owner"
-	_zram_mkfs_mount "5G" "${CEPH_SRC}/build/dev" "$owner"
+_zram_mkfs_mount "1G" "${CEPH_SRC}/build/out" "$owner"
+_zram_mkfs_mount "5G" "${CEPH_SRC}/build/dev" "$owner"
 
-	MON=1 OSD=3 MDS=1 MGR=1 RGW=0 ../src/vstart.sh -n -i $br_ip \
-		--bluestore \
-		|| _fail "CMake based vstart failed"
-else
-	cd ${CEPH_SRC}/src
-	./vstart.sh -n -i $br_ip --mon_num 1 --osd_num 4 --mds_num 0 \
-		|| _fail "autotools based vstart failed"
-fi
+MON=1 OSD=3 MDS=1 MGR=1 RGW=0 ../src/vstart.sh -n -i $br_ip \
+	--bluestore \
+	|| _fail "CMake based vstart failed"
