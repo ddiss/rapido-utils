@@ -29,7 +29,7 @@ function _zram_mkfs_mount {
 				"$dev_size" "$owner")
 		[ -b "$zram_dev" ] || _fail "zram_dev ($zram_dev) didn't appear"
 		sudo /sbin/mkfs.xfs "$zram_dev" || _fail
-		sudo mount "$zram_dev" "$mnt_path" || _fail
+		sudo mount -o discard "$zram_dev" "$mnt_path" || _fail
 		sudo chown "$owner" "$mnt_path" || _fail
 	fi
 }
