@@ -23,15 +23,31 @@ function _zram_mkfs_mount {
 	local dev_size="$1"
 	local mnt_path=$(realpath "$2")
 	local mnt_owner="$3"
-	local is_mounted=$(grep --files-with-match "$mnt_path" /proc/mounts)
-	if [ -d "$mnt_path" ] && [ -z "$is_mounted" ]; then
+	local dev_mounted zram_dev zram_name
+
+	[ -d "$mnt_path" ] || _fail "path $mnt_path not present"
+	dev_mounted=$(awk '$2 ~ "^'"$mnt_path"'$" { print $1 }' /proc/mounts)
+	if [ -z "$dev_mounted" ]; then
 		zram_dev=$(sudo "${RAPIDO_DIR}/tools/zram_hot_add.sh" \
 				"$dev_size" "$owner")
 		[ -b "$zram_dev" ] || _fail "zram_dev ($zram_dev) didn't appear"
-		sudo /sbin/mkfs.xfs "$zram_dev" || _fail
-		sudo mount -o discard "$zram_dev" "$mnt_path" || _fail
-		sudo chown "$owner" "$mnt_path" || _fail
+	else
+		zram_name="${dev_mounted##*/}"
+		[ -z "${zram_name##zram*}" ] \
+			|| _fail "$mnt_path mounted with non-zram $dev_mounted"
+		zram_dev="$dev_mounted"
+		sudo umount "$zram_dev" || _fail "$mnt_path umount failed"
+		# TODO avoid sudo: zram_hot_add.sh could set owner for sys paths
+		pushd "/sys/devices/virtual/block/${zram_name}" || _fail
+		echo 1 | sudo tee "reset" > /dev/null \
+			|| _fail "failed to reset ${zram_name}"
+		echo "$dev_size" | sudo tee "disksize" > /dev/null \
+			|| _fail "failed to set ${zram_name} disksize"
+		popd
 	fi
+	sudo /sbin/mkfs.xfs "$zram_dev" || _fail
+	sudo mount -o discard "$zram_dev" "$mnt_path" || _fail
+	sudo chown "$owner" "$mnt_path" || _fail
 }
 
 [ -z "$CEPH_SRC" ] && _fail "CEPH_SRC must be set for vstart"
