@@ -1,16 +1,6 @@
 #!/bin/bash
-#
-# Copyright (C) SUSE LINUX GmbH 2017, all rights reserved.
-#
-# This library is free software; you can redistribute it and/or modify it
-# under the terms of the GNU Lesser General Public License as published
-# by the Free Software Foundation; either version 2.1 of the License, or
-# (at your option) version 3.
-#
-# This library is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
-# License for more details.
+# SPDX-License-Identifier: (LGPL-2.1 OR LGPL-3.0)
+# Copyright (C) SUSE LLC 2018-2022, all rights reserved.
 
 # start a vstart Ceph cluster from CEPH_SRC
 # XXX sudo is used for zram provisioning/mounting
@@ -25,7 +15,7 @@ function _zram_mkfs_mount {
 	local mnt_owner="$3"
 	local dev_mounted zram_dev zram_name
 
-	[ -d "$mnt_path" ] || _fail "path $mnt_path not present"
+	mkdir -p $mnt_path || _fail "error creating $mnt_path"
 	dev_mounted=$(awk '$2 ~ "^'"$mnt_path"'$" { print $1 }' /proc/mounts)
 	if [ -z "$dev_mounted" ]; then
 		zram_dev=$(sudo "${RAPIDO_DIR}/tools/zram_hot_add.sh" \
